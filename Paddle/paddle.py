@@ -2,6 +2,7 @@
 
 
 import turtle as t
+import math
 
 
 class Paddle():
@@ -11,6 +12,9 @@ class Paddle():
         self.done = False
         self.reward = 0
         self.hit, self.miss = 0, 0
+        self.best = 0
+        self.state = None
+        self.motivation = 0.9
 
         # Setup Background
 
@@ -49,7 +53,7 @@ class Paddle():
         self.score.penup()
         self.score.hideturtle()
         self.score.goto(0, 250)
-        self.score.write("Hit: {}   Missed: {}".format(self.hit, self.miss), align='center', font=('Courier', 24, 'normal'))
+        self.score.write("Hit: {}   Missed: {}   Best: {}".format(self.hit, self.miss, self.best), align='center', font=('Courier', 24, 'normal'))
 
         # -------------------- Keyboard control ----------------------
 
@@ -94,24 +98,47 @@ class Paddle():
             self.ball.sety(290)
             self.ball.dy *= -1
 
+        if self.ball.dx > 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) < 250:
+            self.state = "move_top_right_close"
+        elif self.ball.dx > 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) < 250:
+            self.state = "move_bot_right_close"
+        elif self.ball.dx < 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) < 250:
+            self.state = "move_top_left_close"
+        elif self.ball.dx < 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) < 250:
+            self.state = "move_bot_left_close"
+        elif self.ball.dx > 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) > 250:
+            self.state = "move_top_right_far"
+        elif self.ball.dx > 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) > 250:
+            self.state = "move_bot_right_far"
+        elif self.ball.dx < 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) > 250:
+            self.state = "move_top_left_far"
+        elif self.ball.dx < 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor() - self.ball.xcor()) ** 2 + (self.paddle.ycor() - self.ball.ycor()) ** 2) > 250:
+            self.state = "move_bot_left_far"
+
         # Ball Ground contact
 
         if self.ball.ycor() < -290:
             self.ball.goto(0, 100)
             self.miss += 1
+            if self.hit > self.best:
+                self.best = self.hit
             self.score.clear()
-            self.score.write("Hit: {}   Missed: {}".format(self.hit, self.miss), align='center', font=('Courier', 24, 'normal'))
-            self.reward -= 3
+            self.score.write("Hit: {}   Missed: {}   Best: {}".format(self.hit, self.miss, self.best), align='center', font=('Courier', 24, 'normal'))
+            self.reward -= 100
             self.done = True
+            self.state = "miss"
 
         # Ball Paddle collision
 
         if abs(self.ball.ycor() + 250) < 2 and abs(self.paddle.xcor() - self.ball.xcor()) < 55:
             self.ball.dy *= -1
             self.hit += 1
+            if self.hit > self.best:
+                self.best = self.hit
             self.score.clear()
-            self.score.write("Hit: {}   Missed: {}".format(self.hit, self.miss), align='center', font=('Courier', 24, 'normal'))
-            self.reward += 3
+            self.score.write("Hit: {}   Missed: {}   Best: {}".format(self.hit, self.miss, self.best), align='center', font=('Courier', 24, 'normal'))
+            self.reward += 7
+            self.state = "hit"
 
     # ------------------------ AI control ------------------------
 
@@ -123,25 +150,43 @@ class Paddle():
 
         self.paddle.goto(0, -275)
         self.ball.goto(0, 100)
-        return [self.paddle.xcor()*0.01, self.ball.xcor()*0.01, self.ball.ycor()*0.01, self.ball.dx, self.ball.dy]
+        self.reward = 0
+        self.decay = 0.03
+        self.hit = 0
+        if self.ball.dx > 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) < 250:
+            self.state = "move_top_right_close"
+        elif self.ball.dx > 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) < 250:
+            self.state = "move_bot_right_close"
+        elif self.ball.dx < 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) < 250:
+            self.state = "move_top_left_close"
+        elif self.ball.dx < 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) < 250:
+            self.state = "move_bot_left_close"
+        elif self.ball.dx > 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) > 250:
+            self.state = "move_top_right_far"
+        elif self.ball.dx > 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) > 250:
+            self.state = "move_bot_right_far"
+        elif self.ball.dx < 0 and self.ball.dy > 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) > 250:
+            self.state = "move_top_left_far"
+        elif self.ball.dx < 0 and self.ball.dy < 0 and math.sqrt((self.paddle.xcor()-self.ball.xcor())**2+(self.paddle.ycor()-self.ball.ycor())**2) > 250:
+            self.state = "move_bot_left_far"
+        return [self.paddle.xcor()*0.01, self.ball.xcor()*0.01, self.ball.ycor()*0.01, self.ball.dx, self.ball.dy, self.state]
 
     def step(self, action):
 
-        self.reward = 0
         self.done = 0
 
         if action == 0:
             self.paddle_left()
-            self.reward -= .1
+            self.reward -= self.decay
 
         if action == 2:
             self.paddle_right()
-            self.reward -= .1
+            self.reward -= self.decay
 
         self.run_frame()
 
-        state = [self.paddle.xcor()*0.01, self.ball.xcor()*0.01, self.ball.ycor()*0.01, self.ball.dx, self.ball.dy]
-        return self.reward, state, self.done
+        state = [self.paddle.xcor()*0.01, self.ball.xcor()*0.01, self.ball.ycor()*0.01, self.ball.dx, self.ball.dy, self.state]
+        return self.reward, state, self.done, self.best
 
 
 # ------------------------ Human control ------------------------

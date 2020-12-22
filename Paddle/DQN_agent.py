@@ -1,4 +1,4 @@
-from paddle import Paddle
+from paddle_old import Paddle
 
 import random
 import numpy as np
@@ -65,7 +65,6 @@ class DQN:
 
         targets = rewards + self.gamma*(np.amax(self.model.predict_on_batch(next_states), axis=1))*(1-dones)
         targets_full = self.model.predict_on_batch(states)
-
         ind = np.array([i for i in range(self.batch_size)])
         targets_full[[ind], [actions]] = targets
 
@@ -87,7 +86,7 @@ def train_dqn(episode):
         state = env.reset()
         state = np.reshape(state, (1, state_space))
         score = 0
-        for i in range(max_steps):
+        while True:
             action = agent.act(state)
             reward, next_state, done = env.step(action)
             score += reward
@@ -104,7 +103,7 @@ def train_dqn(episode):
 
 if __name__ == '__main__':
 
-    ep = 100
+    ep = 1000
     loss = train_dqn(ep)
     plt.plot([i for i in range(ep)], loss)
     plt.xlabel('episodes')
